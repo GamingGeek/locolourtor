@@ -1,0 +1,24 @@
+name = "locolourtor"
+main = "src/index.ts"
+compatibility_date = "2026-08-21"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+routes = [{ pattern = "locolourtor.gaminggeek.dev", custom_domain = true }]
+
+[[kv_namespaces]]
+binding = "COLOURS_KV"
+id = "75a316f882ac45bcaab439e6862b7773"
+
+
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "36ad2902c35445fab377c399a77cad72"
+
+
+[durable_objects]
+bindings = [{ name = "BROADCASTER", class_name = "ColourBroadcaster" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ColourBroadcaster"]

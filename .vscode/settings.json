@@ -1,0 +1,12 @@
+{
+  "java.saveActions.organizeImports": false,
+  "java.format.comments.enabled": false,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "never"
+  },
+  "[java]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "never"
+    }
+  }
+}

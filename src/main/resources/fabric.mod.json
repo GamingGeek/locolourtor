@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "locolourtor",
+  "version": "${version}",
+  "name": "Locolourtor",
+  "description": "Customise your locator bar dot colour.",
+  "authors": ["GamingGeek"],
+  "license": "MIT",
+  "icon": "assets/locolourtor/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.gaminggeek.locolourtor.Locolourtor"]
+  },
+  "mixins": ["locolourtor.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": ">=${mcVersionStr}",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

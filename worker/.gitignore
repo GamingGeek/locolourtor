@@ -1,0 +1,12 @@
+# Node modules & dependencies
+node_modules/
+.pnpm-store/
+
+# Cloudflare Wrangler local state & secrets
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# Build artifacts & logs
+dist/
+*.log

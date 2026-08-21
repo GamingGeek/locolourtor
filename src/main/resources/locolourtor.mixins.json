@@ -1,0 +1,11 @@
+{
+    "required": true,
+    "package": "dev.gaminggeek.locolourtor.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "client": [
+        "LocatorBarMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

@@ -1,0 +1,28 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+issueTrackerURL = "https://github.com/GamingGeek/locolourtor/issues"
+
+[[mods]]
+modId = "locolourtor"
+version = "${version}"
+displayName = "Locolourtor"
+description = "Customise your locator bar dot colour."
+logoFile = "assets/locolourtor/icon.png"
+
+[[mixins]]
+config = "locolourtor.mixins.json"
+
+[[dependencies.locolourtor]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.locolourtor]]
+modId = "minecraft"
+type = "required"
+versionRange = "[${mcVersionStr},)"
+ordering = "NONE"
+side = "CLIENT"
