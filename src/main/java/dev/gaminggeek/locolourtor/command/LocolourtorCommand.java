@@ -61,16 +61,24 @@ public final class LocolourtorCommand {
                 .then(buildResetCommand())
                 .then(buildRefreshCommand())
                 .then(buildStatusCommand())
-                .executes(ctx -> {
-                    sendMessage(ctx,
-                            "§6Locolourtor §7— Commands: §f/locolourtor set <colour>§7, §f/locolourtor reset§7, §f/locolourtor refresh [player]§7, §f/locolourtor status");
-                    return 1;
-                });
+                .executes(LocolourtorCommand::showHelp);
 
         var registered = dispatcher.register(root);
 
-        dispatcher.register(literal("locolour").redirect(registered));
-        dispatcher.register(literal("locolor").redirect(registered));
+        dispatcher.register(literal("locolour").executes(LocolourtorCommand::showHelp).redirect(registered));
+        dispatcher.register(literal("locolor").executes(LocolourtorCommand::showHelp).redirect(registered));
+    }
+
+    private static int showHelp(
+            //#if NEOFORGE
+            //$$ CommandContext<CommandSourceStack> ctx
+            //#elseif FABRIC
+            CommandContext<FabricClientCommandSource> ctx
+            //#endif
+    ) {
+        sendMessage(ctx,
+                "§6Locolourtor §7— Commands: §f/locolourtor set <colour>§7, §f/locolourtor reset§7, §f/locolourtor refresh [player]§7, §f/locolourtor status");
+        return 1;
     }
 
     private static LiteralArgumentBuilder<
