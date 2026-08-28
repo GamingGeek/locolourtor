@@ -34,12 +34,12 @@ public final class MojangAuth {
     public static CompletableFuture<VerificationPayload> createVerificationPayload(
             // #if FABRIC && MC <= 12111
             MinecraftClient client
-    // #else
-    // $$ Minecraft client
-    // #endif
+            // #else
+            // $$ Minecraft client
+            // #endif
     ) {
         return client.getProfileKeys().fetchKeyPair().thenApply(optKeyPair -> {
-            if (optKeyPair == null || optKeyPair.isEmpty()) {
+            if (optKeyPair.isEmpty()) {
                 throw new AuthException("No Mojang profile key found");
             }
 

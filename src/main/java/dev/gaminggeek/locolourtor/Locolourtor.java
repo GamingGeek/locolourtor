@@ -77,7 +77,8 @@ public class Locolourtor implements ClientModInitializer {
 
         try {
             System.setProperty("java.net.preferIPv4Addresses", "true");
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 LocolourtorCommand.register(dispatcher));

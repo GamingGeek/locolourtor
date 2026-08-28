@@ -220,8 +220,12 @@ public final class ColourSyncClient {
             return statusCode == 401;
         }
 
-        public boolean isForbidden() { return statusCode == 403; }
+        public boolean isForbidden() {
+            return statusCode == 403;
+        }
 
-        public boolean isInternalError() { return statusCode == 500; }
+        public boolean isInternalError() {
+            return statusCode == 500;
+        }
     }
 }
