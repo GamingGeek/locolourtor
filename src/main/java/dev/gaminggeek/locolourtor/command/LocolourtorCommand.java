@@ -62,9 +62,10 @@ public final class LocolourtorCommand {
                 .then(buildRefreshCommand())
                 .then(buildStatusCommand())
                 .executes(ctx -> {
-            sendMessage(ctx, "§6Locolourtor §7— Commands: §f/locolourtor set <colour>§7, §f/locolourtor reset§7, §f/locolourtor refresh [player]§7, §f/locolourtor status");
-            return 1;
-        });
+                    sendMessage(ctx,
+                            "§6Locolourtor §7— Commands: §f/locolourtor set <colour>§7, §f/locolourtor reset§7, §f/locolourtor refresh [player]§7, §f/locolourtor status");
+                    return 1;
+                });
 
         var registered = dispatcher.register(root);
 
@@ -81,22 +82,28 @@ public final class LocolourtorCommand {
             > buildSetCommand() {
         return literal("set")
                 // /locolourtor set <hex>
-                .then(argument("hex", StringArgumentType.word()).executes(ctx -> executeSetHex(ctx, StringArgumentType.getString(ctx, "hex"))))
+                .then(argument("hex", StringArgumentType.word())
+                        .executes(ctx -> executeSetHex(ctx, StringArgumentType.getString(ctx, "hex"))))
                 // /locolourtor set rgb <r> <g> <b>
-                .then(literal("rgb").then(argument("r", IntegerArgumentType.integer(0, 255)).then(argument("g", IntegerArgumentType.integer(0, 255)).then(argument("b", IntegerArgumentType.integer(0, 255)).executes(ctx -> {
-                    int r = IntegerArgumentType.getInteger(ctx, "r");
-                    int g = IntegerArgumentType.getInteger(ctx, "g");
-                    int b = IntegerArgumentType.getInteger(ctx, "b");
-                    return executeSetHex(ctx, rgbToHex(r, g, b));
-                })))))
+                .then(literal("rgb").then(argument("r", IntegerArgumentType.integer(0, 255))
+                        .then(argument("g", IntegerArgumentType.integer(0, 255))
+                                .then(argument("b", IntegerArgumentType.integer(0, 255)).executes(ctx -> {
+                                    int r = IntegerArgumentType.getInteger(ctx, "r");
+                                    int g = IntegerArgumentType.getInteger(ctx, "g");
+                                    int b = IntegerArgumentType.getInteger(ctx, "b");
+                                    return executeSetHex(ctx, rgbToHex(r, g, b));
+                                })))))
                 // /locolourtor set cmyk <c> <m> <y> <k>
-                .then(literal("cmyk").then(argument("c", IntegerArgumentType.integer(0, 100)).then(argument("m", IntegerArgumentType.integer(0, 100)).then(argument("y", IntegerArgumentType.integer(0, 100)).then(argument("k", IntegerArgumentType.integer(0, 100)).executes(ctx -> {
-                    int c = IntegerArgumentType.getInteger(ctx, "c");
-                    int m = IntegerArgumentType.getInteger(ctx, "m");
-                    int y = IntegerArgumentType.getInteger(ctx, "y");
-                    int k = IntegerArgumentType.getInteger(ctx, "k");
-                    return executeSetHex(ctx, cmykToHex(c, m, y, k));
-                }))))));
+                .then(literal("cmyk").then(argument("c", IntegerArgumentType.integer(0, 100))
+                        .then(argument("m", IntegerArgumentType.integer(0, 100))
+                                .then(argument("y", IntegerArgumentType.integer(0, 100))
+                                        .then(argument("k", IntegerArgumentType.integer(0, 100)).executes(ctx -> {
+                                            int c = IntegerArgumentType.getInteger(ctx, "c");
+                                            int m = IntegerArgumentType.getInteger(ctx, "m");
+                                            int y = IntegerArgumentType.getInteger(ctx, "y");
+                                            int k = IntegerArgumentType.getInteger(ctx, "k");
+                                            return executeSetHex(ctx, cmykToHex(c, m, y, k));
+                                        }))))));
     }
 
     private static int executeSetHex(
@@ -119,11 +126,18 @@ public final class LocolourtorCommand {
         var session = AuthSession.get();
         //#if FABRIC && MC <= 12111
         var client = ctx.getSource().getClient();
+        UUID selfUuid = client.getSession().getUuidOrNull();
         //#else
         //$$ var client = Minecraft.getInstance();
+        //$$ UUID selfUuid = client.getUser().getProfileId();
         //#endif
 
-        if (session.hasValidToken()) {
+        if (selfUuid == null) {
+            sendMessage(ctx, "§cCannot set colour, unable to read your UUID!");
+            return 0;
+        }
+
+        if (session.hasValidToken(selfUuid)) {
             ColourSyncClient.INSTANCE.updateColour(hex).thenRun(() -> {
                 applyLocally(client, hex);
                 sendMessage(ctx, "§aColour updated to §r" + hex + "§a!");
@@ -132,14 +146,14 @@ public final class LocolourtorCommand {
                 LOGGER.error("[Locolourtor] Encountered error during colour update:", cause);
                 if (cause instanceof ColourSyncClient.SyncException apiEx && apiEx.isUnauthorized()) {
                     session.clearToken();
-                    triggerAuthThenSet(ctx, hex);
+                    triggerAuthThenSet(ctx, client, selfUuid, hex);
                 } else {
                     sendMessage(ctx, "§cFailed to update colour: " + cause.getMessage());
                 }
                 return null;
             });
         } else {
-            triggerAuthThenSet(ctx, hex);
+            triggerAuthThenSet(ctx, client, selfUuid, hex);
         }
 
         return 1;
@@ -148,31 +162,33 @@ public final class LocolourtorCommand {
     private static void triggerAuthThenSet(
             //#if NEOFORGE
             //$$ CommandContext<CommandSourceStack> ctx,
+            //$$ Minecraft client,
             //#elseif FABRIC
             CommandContext<FabricClientCommandSource> ctx,
+            //#if MC <= 12111
+            MinecraftClient client,
+            //#else
+            //$$ Minecraft client,
             //#endif
+            //#endif
+            UUID selfUuid,
             String hex) {
-        //#if FABRIC && MC <= 12111
-        var client = ctx.getSource().getClient();
-        //#else
-        //$$ var client = Minecraft.getInstance();
-        //#endif
 
-        MojangAuth.createVerificationPayload(client).thenCompose(ColourSyncClient.INSTANCE::verify).thenCompose(token -> {
-            long expiry = parseJwtExpiry(token);
-            AuthSession.get().setToken(token, expiry);
-            return ColourSyncClient.INSTANCE.updateColour(hex);
-        }).thenRun(() -> {
-            applyLocally(client, hex);
-            sendMessage(ctx, "§aColour set to §r" + hex + "§a!");
-        }).exceptionally(e -> {
-            Throwable cause = getRootCause(e);
-            LOGGER.error("[Locolourtor] Encountered error during colour update:", cause);
-            sendMessage(ctx, "§cFailed to update colour: " + cause.getMessage());
-            return null;
-        });
+        MojangAuth.createVerificationPayload(client).thenCompose(ColourSyncClient.INSTANCE::verify)
+                .thenCompose(token -> {
+                    long expiry = parseJwtExpiry(token);
+                    AuthSession.get().setToken(selfUuid, token, expiry);
+                    return ColourSyncClient.INSTANCE.updateColour(hex);
+                }).thenRun(() -> {
+                    applyLocally(client, hex);
+                    sendMessage(ctx, "§aColour set to §r" + hex + "§a!");
+                }).exceptionally(e -> {
+                    Throwable cause = getRootCause(e);
+                    LOGGER.error("[Locolourtor] Encountered error during colour update:", cause);
+                    sendMessage(ctx, "§cFailed to update colour: " + cause.getMessage());
+                    return null;
+                });
     }
-
 
     private static LiteralArgumentBuilder<
             //#if NEOFORGE
@@ -185,14 +201,21 @@ public final class LocolourtorCommand {
             var session = AuthSession.get();
             //#if FABRIC && MC <= 12111
             var client = ctx.getSource().getClient();
+            UUID selfUuid = client.getSession().getUuidOrNull();
             //#else
             //$$ var client = Minecraft.getInstance();
+            //$$ UUID selfUuid = client.getUser().getProfileId();
             //#endif
 
-            if (session.hasValidToken()) {
-                executeReset(ctx, client);
+            if (selfUuid == null) {
+                sendMessage(ctx, "§cCannot reset colour, unable to read your UUID!");
+                return 0;
+            }
+
+            if (session.hasValidToken(selfUuid)) {
+                executeReset(ctx, client, selfUuid);
             } else {
-                triggerAuthThenReset(ctx, client);
+                triggerAuthThenReset(ctx, client, selfUuid);
             }
             return 1;
         });
@@ -201,46 +224,42 @@ public final class LocolourtorCommand {
     private static void triggerAuthThenReset(
             //#if NEOFORGE
             //$$ CommandContext<CommandSourceStack> ctx,
-            //$$ Minecraft client
+            //$$ Minecraft client,
             //#elseif FABRIC
             CommandContext<FabricClientCommandSource> ctx,
             //#if MC <= 12111
-            MinecraftClient client
+            MinecraftClient client,
             //#else
-            //$$ Minecraft client
+            //$$ Minecraft client,
             //#endif
             //#endif
-    ) {
-        MojangAuth.createVerificationPayload(client).thenCompose(ColourSyncClient.INSTANCE::verify).thenAccept(token -> {
-            long expiry = parseJwtExpiry(token);
-            AuthSession.get().setToken(token, expiry);
-            executeReset(ctx, client);
-        }).exceptionally(e -> {
-            Throwable cause = getRootCause(e);
-            LOGGER.error("[Locolourtor] Encountered error during authentication:", cause);
-            return null;
-        });
+            UUID selfUuid) {
+        MojangAuth.createVerificationPayload(client).thenCompose(ColourSyncClient.INSTANCE::verify)
+                .thenAccept(token -> {
+                    long expiry = parseJwtExpiry(token);
+                    AuthSession.get().setToken(selfUuid, token, expiry);
+                    executeReset(ctx, client, selfUuid);
+                }).exceptionally(e -> {
+                    Throwable cause = getRootCause(e);
+                    LOGGER.error("[Locolourtor] Encountered error during authentication:", cause);
+                    return null;
+                });
     }
 
     private static void executeReset(
             //#if NEOFORGE
             //$$ CommandContext<CommandSourceStack> ctx,
-            //$$ Minecraft client
+            //$$ Minecraft client,
             //#elseif FABRIC
             CommandContext<FabricClientCommandSource> ctx,
             //#if MC <= 12111
-            MinecraftClient client
+            MinecraftClient client,
             //#else
-            //$$ Minecraft client
+            //$$ Minecraft client,
             //#endif
             //#endif
-    ) {
+            UUID selfUuid) {
         ColourSyncClient.INSTANCE.resetColour().thenRun(() -> {
-            //#if FABRIC && MC <= 12111
-            UUID selfUuid = client.getSession().getUuidOrNull();
-            //#else
-            //$$ UUID selfUuid = client.getUser().getProfileId();
-            //#endif
             ColourCache.INSTANCE.remove(selfUuid);
             sendMessage(ctx, "§aColour reset to default");
         }).exceptionally(e -> {
@@ -248,7 +267,7 @@ public final class LocolourtorCommand {
             LOGGER.error("[Locolourtor] Failed to reset colour:", cause);
             if (cause instanceof ColourSyncClient.SyncException apiEx && apiEx.isUnauthorized()) {
                 AuthSession.get().clearToken();
-                triggerAuthThenReset(ctx, client);
+                triggerAuthThenReset(ctx, client, selfUuid);
             } else {
                 sendMessage(ctx, "§cFailed to reset colour: " + cause.getMessage());
             }
@@ -263,7 +282,10 @@ public final class LocolourtorCommand {
             FabricClientCommandSource
             //#endif
             > buildRefreshCommand() {
-        return literal("refresh").executes(LocolourtorCommand::executeRefreshAll).then(argument("player", StringArgumentType.word()).suggests((ctx, builder) -> suggestOnlinePlayers(builder)).executes(ctx -> executeRefreshPlayer(ctx, StringArgumentType.getString(ctx, "player"))));
+        return literal("refresh").executes(LocolourtorCommand::executeRefreshAll)
+                .then(argument("player", StringArgumentType.word())
+                        .suggests((ctx, builder) -> suggestOnlinePlayers(builder))
+                        .executes(ctx -> executeRefreshPlayer(ctx, StringArgumentType.getString(ctx, "player"))));
     }
 
     private static int executeRefreshAll(
@@ -299,7 +321,10 @@ public final class LocolourtorCommand {
             sendMessage(ctx, "§cYou don't seem to be in a world or server...");
             return 0;
         }
-        var entry = client.getNetworkHandler().getPlayerList().stream().filter(p -> p.getProfile().name().equalsIgnoreCase(targetNameOrUuid) || p.getProfile().id().toString().equalsIgnoreCase(targetNameOrUuid)).findFirst().orElse(null);
+        var entry = client.getNetworkHandler().getPlayerList().stream()
+                .filter(p -> p.getProfile().name().equalsIgnoreCase(targetNameOrUuid)
+                        || p.getProfile().id().toString().equalsIgnoreCase(targetNameOrUuid))
+                .findFirst().orElse(null);
         if (entry == null) {
             sendMessage(ctx, "§cPlayer '" + targetNameOrUuid + "' not found in player list.");
             return 0;
@@ -370,14 +395,14 @@ public final class LocolourtorCommand {
             //#endif
 
             var cachedColour = ColourCache.INSTANCE.get(selfUuid);
-            String colourStr = cachedColour.isPresent() ? String.format("#%06X", cachedColour.getAsInt() & 0xFFFFFF) : "§8default, based on your UUID";
+            String colourStr = cachedColour.isPresent() ? String.format("#%06X", cachedColour.getAsInt() & 0xFFFFFF)
+                    : "§8default, based on your UUID";
 
             sendMessage(ctx, "§6Locolourtor Status");
             sendMessage(ctx, "§7Your locator bar colour: §r" + colourStr);
             return 1;
         });
     }
-
 
     private static String normaliseHex(String input) {
         String stripped = input.startsWith("#") ? input.substring(1) : input;
@@ -398,7 +423,6 @@ public final class LocolourtorCommand {
         int b = (int) Math.round(255 * (1.0 - y / 100.0) * kFactor);
         return rgbToHex(r, g, b);
     }
-
 
     private static Throwable getRootCause(Throwable t) {
         while (t.getCause() != null && t.getCause() != t) {
@@ -429,9 +453,11 @@ public final class LocolourtorCommand {
     private static long parseJwtExpiry(String jwt) {
         try {
             String[] parts = jwt.split("\\.");
-            if (parts.length < 2) return 0;
+            if (parts.length < 2)
+                return 0;
             String payloadJson = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
-            com.google.gson.JsonObject obj = new com.google.gson.Gson().fromJson(payloadJson, com.google.gson.JsonObject.class);
+            com.google.gson.JsonObject obj = new com.google.gson.Gson().fromJson(payloadJson,
+                    com.google.gson.JsonObject.class);
             return obj.has("exp") ? obj.get("exp").getAsLong() : 0;
         } catch (Exception e) {
             return 0;
