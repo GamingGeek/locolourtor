@@ -75,11 +75,6 @@ public class Locolourtor implements ClientModInitializer {
     public void onInitializeClient() {
         LOGGER.info("[Locolourtor] Initialising on Fabric...");
 
-        try {
-            System.setProperty("java.net.preferIPv4Addresses", "true");
-        } catch (Throwable ignored) {
-        }
-
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 LocolourtorCommand.register(dispatcher));
 
