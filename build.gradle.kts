@@ -10,7 +10,7 @@ fun Project.dependencyVersion(name: String, friendlyName: String = name, default
 }
 
 group = "dev.gaminggeek"
-version = "1.0.1"
+version = "1.0.2"
 base.archivesName = "locolourtor-${project.name}"
 
 repositories {
