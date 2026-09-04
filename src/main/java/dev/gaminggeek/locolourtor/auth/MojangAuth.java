@@ -1,5 +1,7 @@
 package dev.gaminggeek.locolourtor.auth;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.security.Signature;
 import java.util.Base64;
@@ -31,6 +33,35 @@ public final class MojangAuth {
     private MojangAuth() {
     }
 
+    /**
+     * NoChatReports cancels getProfileKeyPairManager() and hands back an empty manager, but the
+     * real one is still in the field, so read it from there. Matched by type because the field is
+     * named differently across versions. Falls back to the getter if nothing matches.
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> T fieldBehind(Object owner, T fromGetter) {
+        if (owner == null || fromGetter == null) {
+            return fromGetter;
+        }
+        for (Class<?> type = owner.getClass(); type != null; type = type.getSuperclass()) {
+            for (Field field : type.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers()) || !field.getType().isInstance(fromGetter)) {
+                    continue;
+                }
+                try {
+                    field.setAccessible(true);
+                    Object held = field.get(owner);
+                    if (held != null) {
+                        return (T) held;
+                    }
+                } catch (Throwable notReadable) {
+                    // Unreadable field: keep looking, and fall back to the getter if none works.
+                }
+            }
+        }
+        return fromGetter;
+    }
+
     public static CompletableFuture<VerificationPayload> createVerificationPayload(
             // #if FABRIC && MC <= 12111
             MinecraftClient client
@@ -38,7 +69,7 @@ public final class MojangAuth {
             // $$ Minecraft client
             // #endif
     ) {
-        return client.getProfileKeys().fetchKeyPair().thenApply(optKeyPair -> {
+        return fieldBehind(client, client.getProfileKeys()).fetchKeyPair().thenApply(optKeyPair -> {
             if (optKeyPair.isEmpty()) {
                 throw new AuthException("No Mojang profile key found");
             }
