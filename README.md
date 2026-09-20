@@ -14,7 +14,7 @@ Your chosen colour syncs in real-time to any other players with Locolourtor inst
 - **100% Client-Side:** Works wherever you play whether it be LAN/Essential, Realms or a server, no need for extra
 configuration.
 - **Secure & Private:** Authentication using your profile keys, minimal data storage (only your UUID & colour)
-- **Multi-Loader Support:** Available on both **Fabric** and **NeoForge** from 1.21.11 up to 26.2
+- **Multi-Loader Support:** Available on both **Fabric** and **NeoForge** from 1.21.11 up to 26.3
 
 ---
 
@@ -44,6 +44,7 @@ Below are the currently supported versions for the mod. As new versions release,
 | **26.1.1** | ✅ | ✅ |
 | **26.1.2** | ✅ | ✅ |
 | **26.2** | ✅ | ✅ |
+| **26.3** | ✅ | ✅ |
 
 ---
 
